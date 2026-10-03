@@ -1,6 +1,33 @@
-@ZhkhPortal.Api_HostAddress = http://localhost:5059
+@host = http://localhost:5000
 
-GET {{ZhkhPortal.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+### 1. Сервер жив?
+GET {{host}}/health
 
-###
+### 2. Регистрация
+POST {{host}}/api/auth/register
+Content-Type: application/json
+
+{
+  "phone": "+7 999 123-45-67",
+  "password": "123456",
+  "firstName": "Иван",
+  "lastName": "Иванов",
+  "middleName": "Иванович",
+  "dateOfBirth": "1990-01-01"
+}
+
+### 3. Вход
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "phone": "79991234567",
+  "password": "123456"
+}
+
+### 4. Кто я? (вставьте токен вместо ТОКЕН)
+GET {{host}}/api/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMDgzNjE1LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwMzJmLTBiOWEtNzQ2My04MGI0LTZhZTRiMWEyN2RmOSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNpdGl6ZW4iLCJpYXQiOjE3OTEwNTQ4MTUsIm5iZiI6MTc5MTA1NDgxNX0.0sUeg0R34rDAmgzERIqBi4fdhkGYFEOK-96WyF-0R1A
+
+### 5. Без токена (должно быть 401)
+GET {{host}}/api/auth/me
