@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using ZhkhPortal.Api.Services;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
 
@@ -42,7 +41,7 @@ public class RequestController(AppDbContext db) : ControllerBase
     [HttpGet("get_requests")]
     public async Task<IActionResult> GetUserRequests()
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "User is not authenticated" });
+        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
 
         var requests = await db.ServiceRequests
             .Where(r => r.AuthorId == userId)
@@ -54,7 +53,7 @@ public class RequestController(AppDbContext db) : ControllerBase
     [Authorize(Roles = "Worker")]
     public async Task<IActionResult> GetWorkerRequests()
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "User is not authenticated" });
+        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
 
         var requests = await db.ServiceRequests
             .Where(r => r.AssignedWorkerId == userId)
@@ -63,11 +62,9 @@ public class RequestController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("get_requests/admin")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetAdminRequests()
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "User is not authenticated" });
-
         var requests = await db.ServiceRequests
             .ToListAsync();
         return Ok(requests.Select(ToDto));
@@ -76,7 +73,7 @@ public class RequestController(AppDbContext db) : ControllerBase
     [HttpPost("create_request")]
     public async Task<IActionResult> CreateRequest(CreateRequestDto dto)
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "User is not authenticated" });
+        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
 
         var title = dto.Title?.Trim() ?? "";
         var description = dto.Description?.Trim() ?? "";

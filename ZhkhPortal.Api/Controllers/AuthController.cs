@@ -73,4 +73,38 @@ public class AuthController(UserManager<User> users, TokenService tokens) : Cont
         var digits = new string((raw ?? "").Where(char.IsDigit).ToArray());
         return digits.Length is >= 10 and <= 15 ? digits : null;
     }
+
+    [HttpPost("register_worker")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> RegisterWorker(RegisterDto dto)
+    {
+        var phone = NormalizePhone(dto.Phone);
+        if (phone is null)
+            return BadRequest(new { error = "Некорректный номер телефона" });
+        if (string.IsNullOrWhiteSpace(dto.FirstName))
+            return BadRequest(new { error = "Укажите имя" });
+        if (string.IsNullOrWhiteSpace(dto.LastName))
+            return BadRequest(new { error = "Укажите фамилию" });
+        if (string.IsNullOrWhiteSpace(dto.Password) || dto.Password.Length < 6)
+            return BadRequest(new { error = "Пароль должен быть не менее 6 символов" });
+        if (dto.DateOfBirth is null)
+            return BadRequest(new { error = "Укажите дату рождения" });
+
+        var user = new User
+        {
+            UserName = phone,
+            PhoneNumber = phone,
+            FirstName = dto.FirstName.Trim(),
+            LastName = dto.LastName.Trim(),
+            MiddleName = dto.MiddleName?.Trim(),
+            DateOfBirth = dto.DateOfBirth,
+            Role = UserRole.worker
+        };
+
+        var result = await users.CreateAsync(user, dto.Password);
+        if (!result.Succeeded)
+            return BadRequest(new { errors = result.Errors.Select(e => e.Description) });
+
+        return Ok(new { token = tokens.Create(user), user = ToDto(user) });
+    }
 }
