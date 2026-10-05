@@ -15,10 +15,10 @@ builder.Services.AddDbContext<AppDbContext>(o =>
 builder.Services.AddIdentityCore<User>(o =>
 {
     o.Password.RequiredLength = 6;
-    o.Password.RequireDigit = false;
+    o.Password.RequireDigit = true;
     o.Password.RequireLowercase = false;
     o.Password.RequireUppercase = false;
-    o.Password.RequireNonAlphanumeric = false;
+    o.Password.RequireNonAlphanumeric = true;
 }).AddEntityFrameworkStores<AppDbContext>();
 
 builder.Services

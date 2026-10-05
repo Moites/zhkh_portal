@@ -8,8 +8,8 @@ POST {{host}}/api/auth/register
 Content-Type: application/json
 
 {
-  "phone": "+7 999 123-45-67",
-  "password": "123456",
+  "phone": "+7 999 123-45-66",
+  "password": "test123456!",
   "firstName": "Иван",
   "lastName": "Иванов",
   "middleName": "Иванович",
@@ -21,13 +21,28 @@ POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "phone": "79991234567",
-  "password": "123456"
+  "phone": "79991234566",
+  "password": "test123456!"
 }
 
 ### 4. Кто я? (вставьте токен вместо ТОКЕН)
 GET {{host}}/api/auth/me
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMDgzNjE1LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwMzJmLTBiOWEtNzQ2My04MGI0LTZhZTRiMWEyN2RmOSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNpdGl6ZW4iLCJpYXQiOjE3OTEwNTQ4MTUsIm5iZiI6MTc5MTA1NDgxNX0.0sUeg0R34rDAmgzERIqBi4fdhkGYFEOK-96WyF-0R1A
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMjM5NjgwLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwYzdjLTljZDQtNzFlMi1iM2ZiLTYzYmEwYjQwNmZkMSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNpdGl6ZW4iLCJpYXQiOjE3OTEyMTA4ODAsIm5iZiI6MTc5MTIxMDg4MH0.pDeJ0WxtMD1sVHgPP-o2jK0JwEnceI4nwfbd9qiOez0
 
 ### 5. Без токена (должно быть 401)
 GET {{host}}/api/auth/me
+
+### 6. Получить список заявок (только для граждан)
+GET {{host}}/api/request/get_requests
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMjM5NjgwLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwYzdjLTljZDQtNzFlMi1iM2ZiLTYzYmEwYjQwNmZkMSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNpdGl6ZW4iLCJpYXQiOjE3OTEyMTA4ODAsIm5iZiI6MTc5MTIxMDg4MH0.pDeJ0WxtMD1sVHgPP-o2jK0JwEnceI4nwfbd9qiOez0
+
+### 7. Создать заявку (только для граждан)
+POST {{host}}/api/request/create_request
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMjM5NjgwLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwYzdjLTljZDQtNzFlMi1iM2ZiLTYzYmEwYjQwNmZkMSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImNpdGl6ZW4iLCJpYXQiOjE3OTEyMTA4ODAsIm5iZiI6MTc5MTIxMDg4MH0.pDeJ0WxtMD1sVHgPP-o2jK0JwEnceI4nwfbd9qiOez0
+
+{
+  "title": "Заявка о потопе на кухне",
+  "description": "На кухне потоп, вода течет из-под раковины все в квартиру. Прошу срочно устранить течь. Спасибо.",
+  "address": "Дом 10, Квартира 5, ул. Ленина, г. Москва"
+}
