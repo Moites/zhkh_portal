@@ -50,7 +50,7 @@ public class RequestController(AppDbContext db) : ControllerBase
     }
 
     [HttpGet("get_requests/worker")]
-    [Authorize(Roles = "Worker")]
+    [Authorize(Roles = "worker")]
     public async Task<IActionResult> GetWorkerRequests()
     {
         if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });

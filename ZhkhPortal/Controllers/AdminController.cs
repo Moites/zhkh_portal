@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
 
@@ -17,9 +18,12 @@ public class AdminController(AppDbContext db) : ControllerBase
     public async Task<IActionResult> AppointWorker([FromBody] AppointWorkerDto dto)
     {
         var request = await db.ServiceRequests.FindAsync(dto.RequestId);
+        var worker = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == dto.WorkerId && u.Role == UserRole.worker);
 
         if (request != null)
         {
+            if (worker is null)
+                return NotFound(new { error = "Работник не найден" });
             request.AssignedWorkerId = dto.WorkerId;
             await db.SaveChangesAsync();
             return Ok("Работник успешно назначен на заявку");
@@ -33,17 +37,25 @@ public class AdminController(AppDbContext db) : ControllerBase
     [HttpPost("change_status")]
     public async Task<IActionResult> ChangeStatus([FromBody] ChangeStatusDto dto)
     {
-        var request = await db.ServiceRequests.FindAsync(dto.RequestId);
-
-        if (request != null)
+        if (!Enum.IsDefined(typeof(RequestStatus), dto.Status))
         {
-            request.Status = Enum.Parse<RequestStatus>(dto.Status.ToString());
-            await db.SaveChangesAsync();
-            return Ok("Статус заявки успешно изменен");
+            return BadRequest(new { error = "Недопустимый статус заявки" });
+        }
+
+        var request = await db.ServiceRequests.FindAsync(dto.RequestId);
+        if (request is null)
+        {
+            return NotFound(new { error = "Заявка не найдена" });
         }
         else
         {
-            return NotFound(new { error = "Заявка не найдена" });
+            var status = (RequestStatus)dto.Status;
+            request.Status = status;
+            request.DoneAt = status is RequestStatus.Assigned or RequestStatus.InProgress
+                ? (request.DoneAt == default ? DateTime.UtcNow : request.DoneAt)
+                : default;
+            await db.SaveChangesAsync();
+            return Ok("Статус заявки успешно изменен");
         }
     }
 }
