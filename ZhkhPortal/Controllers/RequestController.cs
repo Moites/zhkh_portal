@@ -4,13 +4,14 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
+using ZhkhPortal.Api.Services;
 
 namespace ZhkhPortal.Api.Controllers;
 
 [ApiController]
 [Route("api/request")]
 [Authorize]
-public class RequestController(AppDbContext db) : ControllerBase
+public class RequestController(AppDbContext db, MlClient mlClient) : ControllerBase
 {
     public record CreateRequestDto(string Title, string Description, string Address);
 
@@ -93,6 +94,18 @@ public class RequestController(AppDbContext db) : ControllerBase
             Description = description,
             Address = address
         };
+
+        var ml = await mlClient.PredictAsync(title, description);
+        if (ml is not null)
+        {
+            if (Enum.TryParse<RequestPriority>(ml.Priority, out var p)) request.Priority = p;
+            if (Enum.TryParse<RequestComplexity>(ml.Complexity, out var c)) request.Complexity = c;
+            if (Enum.TryParse<SpecializationType>(ml.Specialization, out var s)) request.Specialization = s;
+        }
+
+        request.NeedsReview = ml is null || ml.NeedsReview;
+        if (!request.NeedsReview)
+            request.Status = RequestStatus.Assigned;
 
         db.ServiceRequests.Add(request);
         await db.SaveChangesAsync();

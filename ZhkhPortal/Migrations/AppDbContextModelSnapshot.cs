@@ -183,6 +183,9 @@ namespace ZhkhPortal.Api.Migrations
                     b.Property<DateTime>("DoneAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("NeedsReview")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Priority")
                         .HasColumnType("integer");
 

@@ -39,6 +39,12 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
+builder.Services.AddHttpClient<MlClient>(c =>
+{
+    c.BaseAddress = new Uri(config["Ml:Url"] ?? "http://localhost:8000/");
+    c.Timeout = TimeSpan.FromSeconds(5);
+});
+
 builder.Services.AddSingleton<TokenService>();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();

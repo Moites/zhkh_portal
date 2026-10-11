@@ -15,6 +15,8 @@ namespace ZhkhPortal.Api.Domain
         public RequestComplexity Complexity { get; set; } = RequestComplexity.Simple;
         public SpecializationType? Specialization { get; set; } = SpecializationType.General;
 
+        public bool NeedsReview { get; set; }
+
         public Guid AuthorId { get; set; }
         public User? Author { get; set; }
 
