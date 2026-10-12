@@ -39,6 +39,12 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
         return Guid.TryParse(userId, out var id) ? id : null;
     }
 
+    private Guid? GetWorkerSpecializationType()
+    {
+        var specialization = User.FindFirstValue(ClaimTypes.SpecializationType);
+        return Guid.TryParse(specialization, out var SpecializationType) ? SpecializationType : null;
+    }
+
     [HttpGet("get_requests")]
     public async Task<IActionResult> GetUserRequests()
     {
@@ -62,11 +68,35 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
         return Ok(requests.Select(ToDto));
     }
 
+    [HttpGet("get_requests/worker_spec")]
+    [Authorize(Roles = "worker")]
+    public async Task<IActionResult> GetWorkerRequests()
+    {
+        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
+        if (GetWorkerSpecializationType() is not Guid specialization) return Unauthorized(new { error = "У работника нет специальности" });
+
+        var requests = await db.ServiceRequests
+            .Where(r => r.SpecializationType == specialization)
+            .ToListAsync();
+        return Ok(requests.Select(ToDto));
+    }
+
+
     [HttpGet("get_requests/admin")]
     [Authorize(Roles = "admin")]
     public async Task<IActionResult> GetAdminRequests()
     {
         var requests = await db.ServiceRequests
+            .ToListAsync();
+        return Ok(requests.Select(ToDto));
+    }
+
+    [HttpGet("get_requests/admin_review")]
+    [Authorize(Roles = "admin")]
+    public async Task<IActionResult> GetAdminRequests()
+    {
+        var requests = await db.ServiceRequests
+            .Where(r => r.NeedsReview == true)
             .ToListAsync();
         return Ok(requests.Select(ToDto));
     }

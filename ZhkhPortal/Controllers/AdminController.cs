@@ -12,7 +12,7 @@ namespace ZhkhPortal.Api.Controllers;
 public class AdminController(AppDbContext db) : ControllerBase
 {
     public record AppointWorkerDto(Guid RequestId, Guid WorkerId);
-    public record ChangeStatusDto(Guid RequestId, int Status);
+    public record ChangeInformationDto(Guid RequestId, int Status, int Priority, int Complexity, int Specialization);
 
     [HttpPost("appoint_worker")]
     public async Task<IActionResult> AppointWorker([FromBody] AppointWorkerDto dto)
@@ -20,7 +20,7 @@ public class AdminController(AppDbContext db) : ControllerBase
         var request = await db.ServiceRequests.FindAsync(dto.RequestId);
         var worker = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == dto.WorkerId && u.Role == UserRole.worker);
 
-        if (request != null)
+        if (request is null)
         {
             if (worker is null)
                 return NotFound(new { error = "Работник не найден" });
@@ -34,13 +34,33 @@ public class AdminController(AppDbContext db) : ControllerBase
         }
     }
 
-    [HttpPost("change_status")]
-    public async Task<IActionResult> ChangeStatus([FromBody] ChangeStatusDto dto)
+    public class UpdateRequestDtoValidator : AbstractValidator<UpdateRequestDto>
     {
-        if (!Enum.IsDefined(typeof(RequestStatus), dto.Status))
+        public UpdateRequestDtoValidator()
         {
-            return BadRequest(new { error = "Недопустимый статус заявки" });
+            RuleFor(X => x.request)
+                .IsInEnum().WithMessage("Заявка не найдена");
+
+            RuleFor(x => x.Status)
+                .IsInEnum().WithMessage("Недопустимый статус");
+
+            RuleFor(x => x.Priority)
+                .IsInEnum().WithMessage("Недопустимый приоритет");
+
+            RuleFor(x => x.Complexity)
+                .IsInEnum().WithMessage("Недопустимая сложность");
+
+            RuleFor(x => x.Specialization)
+                .IsInEnum().WithMessage("Недопустимая специальность");
         }
+    }
+
+    [HttpPost("change_information")]
+    public async Task<IActionResult> ChangeStatus([FromBody] ChangeStatusDto dto, IValidator<UpdateRequestDto> validator)
+    {
+        var result = await validator.ValidateAsync(dto);
+        if (!result.IsValid)
+            return BadRequest(result.ToDictionary());
 
         var request = await db.ServiceRequests.FindAsync(dto.RequestId);
         if (request is null)
@@ -50,6 +70,9 @@ public class AdminController(AppDbContext db) : ControllerBase
         else
         {
             var status = (RequestStatus)dto.Status;
+            var priority = (RequestPriority)dto.Priority;
+            var complexity = (RequestComplexity)dto.Complexity;
+            var specialization = (SpecializationType)dto.SpecializationType;
             request.Status = status;
             request.DoneAt = status is RequestStatus.Assigned or RequestStatus.InProgress
                 ? (request.DoneAt == default ? DateTime.UtcNow : request.DoneAt)

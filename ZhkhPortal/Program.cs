@@ -12,6 +12,8 @@ var config = builder.Configuration;
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(config.GetConnectionString("Default")));
 
+builder.Services.AddValidatorsFromAssemblyContaining<UpdateRequestDtoValidator>();
+
 builder.Services.AddIdentityCore<User>(o =>
 {
     o.Password.RequiredLength = 6;
