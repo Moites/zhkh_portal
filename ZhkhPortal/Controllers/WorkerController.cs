@@ -1,10 +1,9 @@
 using System.Security.Claims;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
-using ZhkhPortal.Api.Services;
 
 namespace ZhkhPortal.Api.Controllers;
 
@@ -13,7 +12,7 @@ namespace ZhkhPortal.Api.Controllers;
 [Authorize(Roles = "worker")]
 public class WorkerController(AppDbContext db) : ControllerBase
 {
-    public record ExecutionRequest (Guid RequestId);
+    public record ExecutionRequest(Guid RequestId);
 
     private Guid? GetUserId()
     {
@@ -24,12 +23,16 @@ public class WorkerController(AppDbContext db) : ControllerBase
     [HttpPost("execution_request")]
     public async Task<IActionResult> PostExecutionRequest([FromBody] ExecutionRequest dto, CancellationToken ct)
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
+        if (GetUserId() is not Guid userId)
+            return Unauthorized(new { error = "Пользователь не аутентифицирован" });
 
         var affected = await db.ServiceRequests
             .Where(r => r.Id == dto.RequestId
-                     && r.AssignedWorkerId == null
-                     && r.Status == RequestStatus.New)
+                     && ((r.Status == RequestStatus.New
+                          && r.AssignedWorkerId == null
+                          && !r.NeedsReview)
+                      || (r.Status == RequestStatus.Assigned
+                          && r.AssignedWorkerId == userId)))
             .ExecuteUpdateAsync(s => s
                 .SetProperty(r => r.AssignedWorkerId, userId)
                 .SetProperty(r => r.Status, RequestStatus.InProgress), ct);
@@ -39,14 +42,15 @@ public class WorkerController(AppDbContext db) : ControllerBase
 
         var exists = await db.ServiceRequests.AnyAsync(r => r.Id == dto.RequestId, ct);
         return exists
-            ? Conflict(new { error = "Заявка уже назначена на другого работника" })
+            ? Conflict(new { error = "Заявку нельзя взять: она уже в работе, назначена другому или ждёт проверки админом" })
             : NotFound(new { error = "Заявка не найдена" });
     }
 
     [HttpPost("taking_request")]
     public async Task<IActionResult> PostTakingRequest([FromBody] ExecutionRequest dto, CancellationToken ct)
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
+        if (GetUserId() is not Guid userId)
+            return Unauthorized(new { error = "Пользователь не аутентифицирован" });
 
         var request = await db.ServiceRequests
             .FirstOrDefaultAsync(r => r.Id == dto.RequestId, ct);

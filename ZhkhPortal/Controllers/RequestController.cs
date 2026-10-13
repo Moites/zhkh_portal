@@ -33,16 +33,23 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
         request.AssignedWorkerId
     );
 
+    private const string SpecializationClaimType = "specialization_type";
+
     private Guid? GetUserId()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         return Guid.TryParse(userId, out var id) ? id : null;
     }
 
-    private Guid? GetWorkerSpecializationType()
+    private SpecializationType? GetWorkerSpecializationType()
     {
-        var specialization = User.FindFirstValue(ClaimTypes.SpecializationType);
-        return Guid.TryParse(specialization, out var SpecializationType) ? SpecializationType : null;
+        var specialization = User.FindFirstValue(SpecializationClaimType);
+        if (string.IsNullOrWhiteSpace(specialization))
+            return null;
+
+        return Enum.TryParse<SpecializationType>(specialization.Trim(), true, out var specializationType)
+            ? specializationType
+            : null;
     }
 
     [HttpGet("get_requests")]
@@ -70,13 +77,13 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
 
     [HttpGet("get_requests/worker_spec")]
     [Authorize(Roles = "worker")]
-    public async Task<IActionResult> GetWorkerRequests()
+    public async Task<IActionResult> GetWorkerSpecializationRequests()
     {
         if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
-        if (GetWorkerSpecializationType() is not Guid specialization) return Unauthorized(new { error = "У работника нет специальности" });
+        if (GetWorkerSpecializationType() is not SpecializationType specialization) return Unauthorized(new { error = "У работника нет специальности" });
 
         var requests = await db.ServiceRequests
-            .Where(r => r.SpecializationType == specialization)
+            .Where(r => r.Specialization == specialization)
             .ToListAsync();
         return Ok(requests.Select(ToDto));
     }
@@ -93,7 +100,7 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
 
     [HttpGet("get_requests/admin_review")]
     [Authorize(Roles = "admin")]
-    public async Task<IActionResult> GetAdminRequests()
+    public async Task<IActionResult> GetAdminReviewRequests()
     {
         var requests = await db.ServiceRequests
             .Where(r => r.NeedsReview == true)

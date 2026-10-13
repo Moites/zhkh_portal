@@ -2,9 +2,11 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using FluentValidation;
 using ZhkhPortal.Api.Services;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
@@ -12,7 +14,7 @@ var config = builder.Configuration;
 builder.Services.AddDbContext<AppDbContext>(o =>
     o.UseNpgsql(config.GetConnectionString("Default")));
 
-builder.Services.AddValidatorsFromAssemblyContaining<UpdateRequestDtoValidator>();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 builder.Services.AddIdentityCore<User>(o =>
 {
@@ -48,7 +50,8 @@ builder.Services.AddHttpClient<MlClient>(c =>
 });
 
 builder.Services.AddSingleton<TokenService>();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
 

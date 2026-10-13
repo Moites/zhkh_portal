@@ -21,8 +21,8 @@ POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "phone": "88005553535",
-  "password": "admin123!"
+  "phone": "89991234561",
+  "password": "Password123!"
 }
 
 ### 4. Кто я? (вставьте токен вместо ТОКЕН)
@@ -51,7 +51,7 @@ Content-Type: application/json
 ### 8. Регситрация работника (только для админа)
 POST {{host}}/api/auth/register_worker
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxMzMwOTM5LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwY2YwLWZlZTctNzZjNS05OTA3LTRjZDQyZDVmNWE1MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQldCz0L7RgCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwiaWF0IjoxNzkxMzAyMTM5LCJuYmYiOjE3OTEzMDIxMzl9.PmTRhrzPG2k-IsZQyeXiVtzjC4HR2-YpalfO9pyD2v4
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxOTQ2MDg3LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwY2YwLWZlZTctNzZjNS05OTA3LTRjZDQyZDVmNWE1MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQldCz0L7RgCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwiaWF0IjoxNzkxOTE3Mjg3LCJuYmYiOjE3OTE5MTcyODd9.4MZj3mZz2CNczHJwYS6Ez7DMTEo3w-YDXpeLK3WndtU
 
 {
     "phone": "79991234561",
@@ -81,3 +81,25 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsa
   "requestId": "4364bfd6-2bca-4ddc-887a-0cf669ecac9a",
   "status": 3
 }
+
+### 11. Изменить данные заявки (только для админа)
+POST {{host}}/api/admin/change_information
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxOTQ2MDg3LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwY2YwLWZlZTctNzZjNS05OTA3LTRjZDQyZDVmNWE1MCIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQldCz0L7RgCIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6ImFkbWluIiwiaWF0IjoxNzkxOTE3Mjg3LCJuYmYiOjE3OTE5MTcyODd9.4MZj3mZz2CNczHJwYS6Ez7DMTEo3w-YDXpeLK3WndtU                              
+
+{
+  "requestId": "4364bfd6-2bca-4ddc-887a-0cf669ecac9a",
+  "status": 3,
+  "priority": 2,
+  "complexity": 1,
+  "specialization": 1
+}
+
+### 11. Изменить данные заявки (только для админа)
+POST {{host}}/api/worker/taking_request
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJ6aGtoLWNsaWVudCIsImlzcyI6Inpoa2gtYXBpIiwiZXhwIjoxNzkxOTQ2Mzc2LCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjAxYTEwZDA0LWEzMjQtNzRmOS04YjcxLTcwMzE2MGY5MDUyNyIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWUiOiLQmNCy0LDQvSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IndvcmtlciIsImlhdCI6MTc5MTkxNzU3NiwibmJmIjoxNzkxOTE3NTc2fQ.9r8vUir2PlzUKJRxhUtzUMKXQub8VlsqJ_QY0Q-X9CQ
+ 
+  {
+  "RequestId": "4364bfd6-2bca-4ddc-887a-0cf669ecac9a"
+  }
