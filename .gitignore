@@ -16,6 +16,8 @@ __pycache__/
 ml/models/
 ml/data/
 *.zip
+node_modules/
+dist/
 
 
 # User-specific files (MonoDevelop/Xamarin Studio)

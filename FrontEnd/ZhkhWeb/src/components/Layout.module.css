@@ -1,0 +1,15 @@
+.link {
+  color: var(--mantine-color-dark-9);
+  text-decoration: none;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--mantine-color-brand-7);
+}
+
+/* NavLink из react-router сам ставит aria-current на активную ссылку */
+.link[aria-current='page'] {
+  color: var(--mantine-color-brand-7);
+}
