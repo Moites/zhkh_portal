@@ -9,7 +9,7 @@ import { useAuth } from '../auth/useAuth'
 import { AuthCard } from '../components/AuthCard'
 import { applyPhoneInput, isPhoneComplete } from '../lib/phone'
 
-const today = new Date().toISOString().slice(0, 10) // "2026-10-16"
+const today = new Date().toISOString().slice(0, 10)
 
 export function Register() {
   const { register } = useAuth()
@@ -102,7 +102,7 @@ export function Register() {
           <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
             <PasswordInput
               label="Пароль"
-              description="Минимум 6 символов"
+              placeholder="Минимум 6 символов"
               autoComplete="new-password"
               {...form.getInputProps('password')}
             />
