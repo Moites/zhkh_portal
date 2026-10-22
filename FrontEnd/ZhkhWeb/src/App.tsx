@@ -5,6 +5,8 @@ import { ComingSoon } from './pages/ComingSoon'
 import { Forbidden } from './pages/Forbidden'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
+import { MyRequests } from './pages/MyRequests'
+import { NewRequest } from './pages/NewRequest'
 import { NotFound } from './pages/NotFound'
 import { Register } from './pages/Register'
 
@@ -22,8 +24,8 @@ export default function App() {
 
         {/* Житель */}
         <Route element={<RequireRole roles={['citizen']} />}>
-          <Route path="/requests" element={<ComingSoon title="Мои заявки" />} />
-          <Route path="/requests/new" element={<ComingSoon title="Новая заявка" />} />
+          <Route path="/requests" element={<MyRequests />} />
+          <Route path="/requests/new" element={<NewRequest />} />
         </Route>
 
         {/* Сотрудник */}

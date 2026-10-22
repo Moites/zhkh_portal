@@ -1,7 +1,8 @@
-// Единое место, через которое фронтенд общается с API.
-
 const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 const TOKEN_KEY = 'zhkh_token'
+
+// Демо-режим (npm run dev:mock): вместо настоящего сервера отвечает src/api/mock.ts
+export const IS_MOCK: boolean = import.meta.env.VITE_MOCK === 'true'
 
 export const tokenStorage = {
   get: () => localStorage.getItem(TOKEN_KEY),
@@ -9,7 +10,6 @@ export const tokenStorage = {
   clear: () => localStorage.removeItem(TOKEN_KEY),
 }
 
-// Событие, которое мы отправляем, если сервер ответил 401 (токен не подошёл)
 export const UNAUTHORIZED_EVENT = 'zhkh:unauthorized'
 
 export class ApiError extends Error {
@@ -21,7 +21,6 @@ export class ApiError extends Error {
   }
 }
 
-// Достаём человеческий текст ошибки из разных форматов ответа сервера
 function extractMessage(data: unknown, status: number): string {
   if (typeof data === 'string' && data.trim()) return data
   if (data && typeof data === 'object') {
@@ -29,9 +28,7 @@ function extractMessage(data: unknown, status: number): string {
     if (typeof d.error === 'string') return d.error
     if (Array.isArray(d.errors)) return d.errors.join('. ')
     if (d.errors && typeof d.errors === 'object') {
-      return Object.values(d.errors as Record<string, unknown>)
-        .flat()
-        .join('. ')
+      return Object.values(d.errors as Record<string, unknown>).flat().join('. ')
     }
     if (typeof d.title === 'string') return d.title
   }
@@ -47,34 +44,44 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const token = tokenStorage.get()
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  let response: Response
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      method,
-      headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
-  } catch {
-    throw new ApiError(0, 'Нет связи с сервером. Проверьте, что API запущен')
-  }
-
-  // Ответ может быть JSON, обычной строкой или пустым
-  const text = await response.text()
+  let status: number
   let data: unknown = undefined
-  if (text) {
+
+  if (IS_MOCK) {
+    const { mockHandler } = await import('./mock')
+    const mocked = await mockHandler(method, path, body, token)
+    status = mocked.status
+    data = mocked.body
+  } else {
+    let response: Response
     try {
-      data = JSON.parse(text)
+      response = await fetch(`${API_URL}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+      })
     } catch {
-      data = text
+      throw new ApiError(0, 'Нет связи с сервером. Проверьте, что API запущен')
+    }
+
+    // Ответ может быть JSON, обычной строкой или пустым
+    const text = await response.text()
+    status = response.status
+    if (text) {
+      try {
+        data = JSON.parse(text)
+      } catch {
+        data = text
+      }
     }
   }
 
-  if (!response.ok) {
-    if (response.status === 401 && token) {
+  if (status >= 400) {
+    if (status === 401 && token) {
       tokenStorage.clear()
       window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
     }
-    throw new ApiError(response.status, extractMessage(data, response.status))
+    throw new ApiError(status, extractMessage(data, status))
   }
 
   return data as T
