@@ -1,0 +1,17 @@
+services:
+  python-ml:
+    build: ./BackEnd/MLModels
+    ports:
+      - "8000:8000"
+
+  csharp-api:
+    build: ./BackEnd/ZhkhPortal
+    ports:
+      - "5000:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build: ./FrontEnd/ZhkhWeb
+    ports:
+      - "5173:5173"
