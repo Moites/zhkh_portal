@@ -8,6 +8,9 @@ services:
     build: ./BackEnd/ZhkhPortal
     ports:
       - "5000:5000"
+    environment:
+      - Ml__Url=http://python-ml:8000/
+      - ClientUrl=http://192.168.1.106:5173
     extra_hosts:
       - "host.docker.internal:host-gateway"
 

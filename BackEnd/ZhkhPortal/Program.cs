@@ -56,8 +56,10 @@ builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
-    p.WithOrigins(config["ClientUrl"] ?? "http://localhost:5173")
-     .AllowAnyHeader().AllowAnyMethod()));
+    p.SetIsOriginAllowed(_ => true)
+     .AllowAnyHeader()
+     .AllowAnyMethod()
+     .AllowCredentials()));
 
 var app = builder.Build();
 
