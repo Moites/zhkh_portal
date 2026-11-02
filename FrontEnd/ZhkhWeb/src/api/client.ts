@@ -1,4 +1,4 @@
-const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
+const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://192.168.1.106:5000'
 const TOKEN_KEY = 'zhkh_token'
 
 // Демо-режим (npm run dev:mock): вместо настоящего сервера отвечает src/api/mock.ts
