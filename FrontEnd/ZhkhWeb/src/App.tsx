@@ -1,7 +1,9 @@
 import { Route, Routes } from 'react-router-dom'
 import { GuestOnly, RequireRole } from './auth/RouteGuards'
 import { Layout } from './components/Layout'
-import { ComingSoon } from './pages/ComingSoon'
+import { AdminRequests } from './pages/AdminRequests'
+import { AdminReview } from './pages/AdminReview'
+import { AdminWorkers } from './pages/AdminWorkers'
 import { Forbidden } from './pages/Forbidden'
 import { FreeTasks } from './pages/FreeTasks'
 import { Home } from './pages/Home'
@@ -18,29 +20,25 @@ export default function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
 
-        {/* Только для тех, кто НЕ вошёл */}
         <Route element={<GuestOnly />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Route>
 
-        {/* Житель */}
         <Route element={<RequireRole roles={['citizen']} />}>
           <Route path="/requests" element={<MyRequests />} />
           <Route path="/requests/new" element={<NewRequest />} />
         </Route>
 
-        {/* Сотрудник */}
         <Route element={<RequireRole roles={['worker']} />}>
           <Route path="/tasks" element={<WorkerTasks />} />
           <Route path="/tasks/free" element={<FreeTasks />} />
         </Route>
 
-        {/* Администратор */}
         <Route element={<RequireRole roles={['admin']} />}>
-          <Route path="/admin/requests" element={<ComingSoon title="Все заявки" />} />
-          <Route path="/admin/review" element={<ComingSoon title="Очередь проверки" />} />
-          <Route path="/admin/workers" element={<ComingSoon title="Сотрудники" />} />
+          <Route path="/admin/requests" element={<AdminRequests />} />
+          <Route path="/admin/review" element={<AdminReview />} />
+          <Route path="/admin/workers" element={<AdminWorkers />} />
         </Route>
 
         <Route path="/forbidden" element={<Forbidden />} />

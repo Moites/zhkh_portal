@@ -1,7 +1,9 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
 
@@ -14,6 +16,15 @@ public class AdminController(AppDbContext db) : ControllerBase
 {
     public record AppointWorkerDto(Guid RequestId, Guid WorkerId);
     public record ChangeInformationDto(Guid RequestId, int Status, int Priority, int Complexity, int Specialization);
+    public record PromoteWorkerDto(Guid UserId, int Specialization);
+    public record CreateWorkerDto(
+        string FirstName,
+        string LastName,
+        string? MiddleName,
+        DateOnly DateOfBirth,
+        string Phone,
+        string Password,
+        int Specialization);
 
     public class ChangeInformationDtoValidator : AbstractValidator<ChangeInformationDto>
     {
@@ -29,6 +40,122 @@ public class AdminController(AppDbContext db) : ControllerBase
             RuleFor(x => x.Specialization).Must(v => Enum.IsDefined(typeof(SpecializationType), v))
                 .WithMessage("Недопустимая специальность");
         }
+    }
+
+    private readonly struct DobAdapter(DateOnly value)
+    {
+        public static implicit operator DateOnly(DobAdapter a) => a.value;
+        public static implicit operator DateTime(DobAdapter a) => a.value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+    }
+
+    private static TUser NewUser<TUser>(DbSet<TUser> _) where TUser : class, new() => new();
+
+    private UserManager<TUser> ResolveUserManager<TUser>(DbSet<TUser> _) where TUser : class
+        => HttpContext.RequestServices.GetRequiredService<UserManager<TUser>>();
+
+    [HttpGet("workers")]
+    public async Task<IActionResult> GetWorkers()
+    {
+        var workers = await db.Users
+            .AsNoTracking()
+            .Where(u => u.Role == UserRole.worker)
+            .OrderBy(u => u.LastName)
+            .ThenBy(u => u.FirstName)
+            .Select(u => new
+            {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.MiddleName,
+                u.DateOfBirth,
+                Phone = u.UserName ?? u.PhoneNumber ?? "",
+                Role = u.Role.ToString(),
+                Specialization = u.Specialization != null ? u.Specialization.ToString() : null
+            })
+            .ToListAsync();
+
+        return Ok(workers);
+    }
+
+    [HttpGet("users")]
+    public async Task<IActionResult> GetUsers()
+    {
+        var users = await db.Users
+            .AsNoTracking()
+            .OrderBy(u => u.LastName)
+            .ThenBy(u => u.FirstName)
+            .Select(u => new
+            {
+                u.Id,
+                u.FirstName,
+                u.LastName,
+                u.MiddleName,
+                u.DateOfBirth,
+                Phone = u.UserName ?? u.PhoneNumber ?? "",
+                Role = u.Role.ToString(),
+                Specialization = u.Specialization != null ? u.Specialization.ToString() : null
+            })
+            .ToListAsync();
+
+        return Ok(users);
+    }
+
+    [HttpPost("create_worker")]
+    public async Task<IActionResult> CreateWorker([FromBody] CreateWorkerDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.FirstName) ||
+            string.IsNullOrWhiteSpace(dto.LastName) ||
+            string.IsNullOrWhiteSpace(dto.Phone) ||
+            string.IsNullOrWhiteSpace(dto.Password))
+        {
+            return BadRequest(new { error = "Заполните все обязательные поля" });
+        }
+
+        if (!Enum.IsDefined(typeof(SpecializationType), dto.Specialization))
+            return BadRequest(new { error = "Недопустимая специальность" });
+
+        var phone = dto.Phone.Trim();
+        var exists = await db.Users.AnyAsync(u => u.UserName == phone || u.PhoneNumber == phone);
+        if (exists)
+            return Conflict(new { error = "Пользователь с таким номером телефона уже зарегистрирован" });
+
+        var user = NewUser(db.Users);
+        user.Id = Guid.NewGuid();
+        user.UserName = phone;
+        user.PhoneNumber = phone;
+        user.FirstName = dto.FirstName.Trim();
+        user.LastName = dto.LastName.Trim();
+        user.MiddleName = string.IsNullOrWhiteSpace(dto.MiddleName) ? string.Empty : dto.MiddleName.Trim();
+        user.DateOfBirth = new DobAdapter(dto.DateOfBirth);
+        user.Role = UserRole.worker;
+        user.Specialization = (SpecializationType)dto.Specialization;
+
+        var userManager = ResolveUserManager(db.Users);
+        var result = await userManager.CreateAsync(user, dto.Password);
+        if (!result.Succeeded)
+        {
+            var errorMsg = string.Join("; ", result.Errors.Select(e => e.Description));
+            return BadRequest(new { error = string.IsNullOrWhiteSpace(errorMsg) ? "Не удалось создать сотрудника" : errorMsg });
+        }
+
+        return Ok(new { message = "Сотрудник успешно создан", id = user.Id });
+    }
+
+    [HttpPost("promote_worker")]
+    public async Task<IActionResult> PromoteWorker([FromBody] PromoteWorkerDto dto)
+    {
+        if (!Enum.IsDefined(typeof(SpecializationType), dto.Specialization))
+            return BadRequest(new { error = "Недопустимая специальность" });
+
+        var user = await db.Users.FindAsync(dto.UserId);
+        if (user is null)
+            return NotFound(new { error = "Пользователь не найден" });
+
+        user.Role = UserRole.worker;
+        user.Specialization = (SpecializationType)dto.Specialization;
+
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Настройки сотрудника сохранены" });
     }
 
     [HttpPost("appoint_worker")]
