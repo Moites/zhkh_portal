@@ -75,17 +75,33 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
         return Ok(requests.Select(ToDto));
     }
 
-    [HttpGet("get_requests/worker_spec")]
     [Authorize(Roles = "worker")]
-    public async Task<IActionResult> GetWorkerSpecializationRequests()
+    [HttpGet("get_requests/worker_spec")]
+    public async Task<IActionResult> GetWorkerSpecRequests()
     {
-        if (GetUserId() is not Guid userId) return Unauthorized(new { error = "Пользователь не аутентифицирован" });
-        if (GetWorkerSpecializationType() is not SpecializationType specialization) return Unauthorized(new { error = "У работника нет специальности" });
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!Guid.TryParse(userIdStr, out var workerId))
+            return Ok(Array.Empty<object>());
+
+        var worker = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(u => u.Id == workerId && u.Role == UserRole.worker);
+
+        if (worker is null)
+            return Ok(Array.Empty<object>());
+
+        var spec = worker.Specialization ?? SpecializationType.General;
 
         var requests = await db.ServiceRequests
-            .Where(r => r.Specialization == specialization)
+            .AsNoTracking()
+            .Where(r => r.Specialization == spec &&
+                        r.AssignedWorkerId == null &&
+                        r.Status == RequestStatus.New &&
+                        !r.NeedsReview)
+            .OrderByDescending(r => r.CreatedAt)
             .ToListAsync();
-        return Ok(requests.Select(ToDto));
+
+        return Ok(requests);
     }
 
 
@@ -141,8 +157,30 @@ public class RequestController(AppDbContext db, MlClient mlClient) : ControllerB
         }
 
         request.NeedsReview = ml is null || ml.NeedsReview;
+        // Автоназначение работника с минимальной текущей нагрузкой (если заявка не требует ручной проверки)
         if (!request.NeedsReview)
-            request.Status = RequestStatus.Assigned;
+        {
+            var leastLoadedWorker = await db.Users
+                .AsNoTracking()
+                .Where(u => u.Role == UserRole.worker && u.Specialization == request.Specialization)
+                .Select(u => new
+                {
+                    u.Id,
+                    ActiveCount = db.ServiceRequests.Count(r =>
+                        r.AssignedWorkerId == u.Id &&
+                        (r.Status == RequestStatus.Assigned || r.Status == RequestStatus.InProgress)),
+                    TotalCount = db.ServiceRequests.Count(r => r.AssignedWorkerId == u.Id)
+                })
+                .OrderBy(w => w.ActiveCount)
+                .ThenBy(w => w.TotalCount)
+                .FirstOrDefaultAsync();
+
+            if (leastLoadedWorker is not null)
+            {
+                request.AssignedWorkerId = leastLoadedWorker.Id;
+                request.Status = RequestStatus.Assigned;
+            }
+        }
 
         db.ServiceRequests.Add(request);
         await db.SaveChangesAsync();

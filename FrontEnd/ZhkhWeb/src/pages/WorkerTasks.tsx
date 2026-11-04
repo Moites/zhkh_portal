@@ -1,6 +1,5 @@
 import {
   Alert,
-  Badge,
   Button,
   Group,
   Paper,
@@ -8,6 +7,7 @@ import {
   Skeleton,
   Stack,
   Text,
+  Textarea,
   ThemeIcon,
   Title,
 } from '@mantine/core'
@@ -16,42 +16,34 @@ import { notifications } from '@mantine/notifications'
 import {
   IconAlertCircle,
   IconCheck,
-  IconChecklist,
+  IconClipboardList,
+  IconMessageReport,
   IconPlayerPlay,
-  IconSend,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { ApiError } from '../api/client'
 import {
-  WORKER_REQUESTS_KEY,
-  WORKER_SPEC_REQUESTS_KEY,
   completeRequest,
   fetchWorkerRequests,
+  sendRequestToReview,
   startExecutionRequest,
+  WORKER_REQUESTS_KEY,
+  WORKER_SPEC_REQUESTS_KEY,
 } from '../api/requests'
-import type { RequestPriority, ServiceRequest } from '../api/types'
-import { useAuth } from '../auth/useAuth'
+import type { ServiceRequest } from '../api/types'
 import { RequestCard } from '../components/RequestCard'
 import { RequestDrawer } from '../components/RequestDrawer'
 import { toDate } from '../lib/format'
-import { SPECIALIZATION } from '../lib/labels'
 import { SOFT_BG } from '../theme'
 
-type Filter = 'active' | 'assigned' | 'in_progress' | 'done'
-
-const PRIORITY_WEIGHT: Record<RequestPriority, number> = {
-  Emergency: 4,
-  High: 3,
-  Medium: 2,
-  Low: 1,
-}
+type Filter = 'active' | 'completed' | 'all'
 
 export function WorkerTasks() {
-  const { user } = useAuth()
   const queryClient = useQueryClient()
   const [filter, setFilter] = useState<Filter>('active')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [reviewComment, setReviewComment] = useState('')
   const [drawerOpened, drawer] = useDisclosure(false)
 
   const { data, isLoading, error, refetch, isFetching } = useQuery({
@@ -64,7 +56,6 @@ export function WorkerTasks() {
     void queryClient.invalidateQueries({ queryKey: WORKER_SPEC_REQUESTS_KEY })
   }
 
-  // Мутация: Взять заявку в работу (Assigned -> InProgress)
   const startMutation = useMutation({
     mutationFn: startExecutionRequest,
     onSuccess: (res) => {
@@ -79,11 +70,10 @@ export function WorkerTasks() {
     },
   })
 
-  // Мутация: Завершить заявку (InProgress -> Completed)
   const completeMutation = useMutation({
     mutationFn: completeRequest,
     onSuccess: (res) => {
-      notifications.show({ color: 'green', message: res.message || 'Заявка успешно выполнена' })
+      notifications.show({ color: 'green', message: res.message || 'Заявка выполнена' })
       invalidateAll()
       drawer.close()
     },
@@ -95,47 +85,37 @@ export function WorkerTasks() {
     },
   })
 
-  // Обработчик для кнопки «Отправить на проверку менеджеру» (под будущий бэкенд)
-  const handleSendToReview = (_requestId: string) => {
-    notifications.show({
-      color: 'blue',
-      message: 'Запрос на проверку менеджеру отправлен (функция скоро будет подключена к серверу)',
-    })
-  }
+  const reviewMutation = useMutation({
+    mutationFn: ({ id, comment }: { id: string; comment: string }) =>
+      sendRequestToReview(id, comment),
+    onSuccess: (res) => {
+      notifications.show({
+        color: 'blue',
+        message: res.message || 'Заявка отправлена на рассмотрение администратору',
+      })
+      setReviewComment('')
+      invalidateAll()
+      drawer.close()
+    },
+    onError: (e) => {
+      notifications.show({
+        color: 'red',
+        message: e instanceof ApiError ? e.message : 'Не удалось отправить на рассмотрение',
+      })
+    },
+  })
 
-  // Сортировка: приоритетные и свежие сверху
-  const sorted = useMemo(() => {
-    return [...(data ?? [])].sort((a, b) => {
-      const weightDiff = (PRIORITY_WEIGHT[b.priority] ?? 0) - (PRIORITY_WEIGHT[a.priority] ?? 0)
-      if (weightDiff !== 0) return weightDiff
-      return toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime()
-    })
-  }, [data])
-
-  const assignedList = sorted.filter((r) => r.status === 'Assigned' || r.status === 'New')
-  const inProgressList = sorted.filter((r) => r.status === 'InProgress')
-  const activeList = sorted.filter(
-    (r) => r.status === 'Assigned' || r.status === 'InProgress' || r.status === 'New',
+  const sorted = useMemo(
+    () => [...(data ?? [])].sort((a, b) => toDate(b.createdAt).getTime() - toDate(a.createdAt).getTime()),
+    [data],
   )
-  const doneList = sorted
-    .filter((r) => r.status === 'Completed' || r.status === 'Rejected')
-    .sort((a, b) => toDate(b.doneAt ?? b.createdAt).getTime() - toDate(a.doneAt ?? a.createdAt).getTime())
 
-  const visible = useMemo(() => {
-    switch (filter) {
-      case 'assigned':
-        return assignedList
-      case 'in_progress':
-        return inProgressList
-      case 'done':
-        return doneList
-      case 'active':
-      default:
-        return activeList
-    }
-  }, [filter, assignedList, inProgressList, doneList, activeList])
+  const activeList = sorted.filter((r) => r.status === 'Assigned' || r.status === 'InProgress')
+  const completedList = sorted.filter((r) => r.status === 'Completed' || r.status === 'Rejected')
 
-  // Всегда берём актуальный объект заявки из кеша по ID, чтобы в открытом Drawer сразу менялся статус
+  const visible =
+    filter === 'active' ? activeList : filter === 'completed' ? completedList : sorted
+
   const selected = useMemo(
     () => sorted.find((r) => r.id === selectedId) ?? null,
     [sorted, selectedId],
@@ -143,36 +123,30 @@ export function WorkerTasks() {
 
   const open = (request: ServiceRequest) => {
     setSelectedId(request.id)
+    setReviewComment('')
     drawer.open()
   }
 
   return (
     <Stack gap="lg">
-      <Group justify="space-between" align="center" wrap="wrap">
+      <Group justify="space-between" align="center">
         <div>
           <Title order={2}>Мои задачи</Title>
           <Text c="dimmed" fz="sm" mt={2}>
-            Назначенные вам заявки и история выполненных работ
+            Назначенные вам заявки и управление их выполнением
           </Text>
         </div>
-
-        {user?.specialization && (
-          <Badge variant="light" color="brand" size="lg">
-            Специализация: {SPECIALIZATION[user.specialization] ?? user.specialization}
-          </Badge>
-        )}
       </Group>
 
       {isLoading && (
         <Stack gap="md">
           <Skeleton height={150} radius="lg" />
           <Skeleton height={150} radius="lg" />
-          <Skeleton height={150} radius="lg" />
         </Stack>
       )}
 
       {error && (
-        <Alert color="red" variant="light" icon={<IconAlertCircle size={18} />} title="Не удалось загрузить задачи">
+        <Alert color="red" variant="light" icon={<IconAlertCircle size={18} />} title="Ошибка загрузки">
           <Stack gap="sm" align="flex-start">
             <Text>{error instanceof ApiError ? error.message : 'Попробуйте ещё раз'}</Text>
             <Button variant="light" color="red" size="xs" loading={isFetching} onClick={() => void refetch()}>
@@ -186,13 +160,13 @@ export function WorkerTasks() {
         <Paper bg={SOFT_BG} radius="lg" p="xl">
           <Stack align="center" gap="sm" py="lg">
             <ThemeIcon size={64} radius="xl" variant="white" color="brand">
-              <IconChecklist size={34} />
+              <IconClipboardList size={34} />
             </ThemeIcon>
             <Text fw={600} fz={20}>
-              Назначенных заявок пока нет
+              У вас пока нет назначенных задач
             </Text>
             <Text c="dimmed" ta="center">
-              Когда диспетчер или система назначит вам заявку, она появится здесь
+              Новые заявки вашей специализации будут назначаться автоматически или появятся во вкладке «Свободные заявки»
             </Text>
           </Stack>
         </Paper>
@@ -202,28 +176,21 @@ export function WorkerTasks() {
         <>
           <SegmentedControl
             value={filter}
-            onChange={(value) => setFilter(value as Filter)}
+            onChange={(v) => setFilter(v as Filter)}
             data={[
               { value: 'active', label: `Активные (${activeList.length})` },
-              { value: 'assigned', label: `Назначенные (${assignedList.length})` },
-              { value: 'in_progress', label: `В работе (${inProgressList.length})` },
-              { value: 'done', label: `Выполненные (${doneList.length})` },
+              { value: 'completed', label: `Завершённые (${completedList.length})` },
+              { value: 'all', label: `Все (${sorted.length})` },
             ]}
             fullWidth
-            maw={680}
+            maw={520}
           />
 
-          {visible.length === 0 ? (
-            <Text c="dimmed" ta="center" py="xl">
-              В этой категории заявок нет
-            </Text>
-          ) : (
-            <Stack gap="md">
-              {visible.map((request) => (
-                <RequestCard key={request.id} request={request} onOpen={open} />
-              ))}
-            </Stack>
-          )}
+          <Stack gap="md">
+            {visible.map((request) => (
+              <RequestCard key={request.id} request={request} onOpen={open} />
+            ))}
+          </Stack>
         </>
       )}
 
@@ -233,44 +200,60 @@ export function WorkerTasks() {
         onClose={drawer.close}
         actions={
           selected && (
-            <Stack gap="sm">
-              {(selected.status === 'Assigned' || selected.status === 'New') && (
+            <Stack gap="md">
+              {selected.status === 'Assigned' && (
                 <Button
-                  size="md"
-                  color="brand"
                   leftSection={<IconPlayerPlay size={18} />}
                   loading={startMutation.isPending}
                   onClick={() => startMutation.mutate(selected.id)}
                   fullWidth
                 >
-                  Взять в работу
+                  Приступить к выполнению (В работу)
                 </Button>
               )}
 
               {selected.status === 'InProgress' && (
                 <Button
-                  size="md"
                   color="green"
                   leftSection={<IconCheck size={18} />}
                   loading={completeMutation.isPending}
                   onClick={() => completeMutation.mutate(selected.id)}
                   fullWidth
                 >
-                  Завершить задание
+                  Завершить заявку (Выполнено)
                 </Button>
               )}
 
-              {selected.status !== 'Completed' && selected.status !== 'Rejected' && (
-                <Button
-                  size="md"
-                  variant="light"
-                  color="orange"
-                  leftSection={<IconSend size={18} />}
-                  onClick={() => handleSendToReview(selected.id)}
-                  fullWidth
-                >
-                  Отправить на проверку менеджеру
-                </Button>
+              {(selected.status === 'Assigned' || selected.status === 'InProgress') && (
+                <Paper bg={SOFT_BG} p="md" radius="md">
+                  <Stack gap="sm">
+                    <Text fw={600} fz="sm">
+                      Нужна правка или пересмотр администратором?
+                    </Text>
+                    <Textarea
+                      placeholder="Опишите причину (например: требуется другая специальность, неверный адрес, нужна отмена заявки)..."
+                      minRows={3}
+                      value={reviewComment}
+                      onChange={(e) => setReviewComment(e.currentTarget.value)}
+                    />
+                    <Button
+                      variant="light"
+                      color="orange"
+                      leftSection={<IconMessageReport size={18} />}
+                      disabled={reviewComment.trim().length < 5}
+                      loading={reviewMutation.isPending}
+                      onClick={() =>
+                        reviewMutation.mutate({
+                          id: selected.id,
+                          comment: reviewComment.trim(),
+                        })
+                      }
+                      fullWidth
+                    >
+                      Отправить правки на рассмотрение
+                    </Button>
+                  </Stack>
+                </Paper>
               )}
             </Stack>
           )

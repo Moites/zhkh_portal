@@ -22,7 +22,7 @@ export function Login() {
     },
   })
 
-  const handleSubmit = form.onSubmit(async (values) => {
+const handleSubmit = form.onSubmit(async (values) => {
     setError(null)
     setSubmitting(true)
     try {

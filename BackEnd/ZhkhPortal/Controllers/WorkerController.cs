@@ -71,4 +71,28 @@ public class WorkerController(AppDbContext db) : ControllerBase
 
         return Ok(new { message = "Заявка выполнена" });
     }
+
+    public record SendToReviewDto(Guid RequestId, string Comment);
+
+    [HttpPost("review_request")]
+    public async Task<IActionResult> SendToReview([FromBody] SendToReviewDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.Comment))
+            return BadRequest(new { error = "Напишите комментарий с описанием правок или причины возврата" });
+
+        var request = await db.ServiceRequests.FindAsync(dto.RequestId);
+        if (request is null)
+            return NotFound(new { error = "Заявка не найдена" });
+
+        var cleanComment = dto.Comment.Trim();
+        var reviewBlock = $"\n\n[Комментарий сотрудника]: {cleanComment}";
+
+        if (!request.Description.Contains(cleanComment))
+            request.Description += reviewBlock;
+
+        request.NeedsReview = true;
+
+        await db.SaveChangesAsync();
+        return Ok(new { message = "Заявка отправлена на рассмотрение администратору" });
+    }
 }

@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using ZhkhPortal.Api.Domain;
 using ZhkhPortal.Api.Infrastructure;
 
@@ -15,7 +14,16 @@ namespace ZhkhPortal.Api.Controllers;
 public class AdminController(AppDbContext db) : ControllerBase
 {
     public record AppointWorkerDto(Guid RequestId, Guid WorkerId);
-    public record ChangeInformationDto(Guid RequestId, int Status, int Priority, int Complexity, int Specialization);
+    public record ChangeInformationDto(
+        Guid RequestId,
+        int Status,
+        int Priority,
+        int Complexity,
+        int Specialization,
+        string? Title = null,
+        string? Description = null,
+        string? Address = null);
+
     public record PromoteWorkerDto(Guid UserId, int Specialization);
     public record CreateWorkerDto(
         string FirstName,
@@ -191,12 +199,50 @@ public class AdminController(AppDbContext db) : ControllerBase
         if (request is null)
             return NotFound(new { error = "Заявка не найдена" });
 
+        if (!string.IsNullOrWhiteSpace(dto.Title))
+            request.Title = dto.Title.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Description))
+            request.Description = dto.Description.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.Address))
+            request.Address = dto.Address.Trim();
+
         var status = (RequestStatus)dto.Status;
+        var newSpec = (SpecializationType)dto.Specialization;
+        var specChanged = request.Specialization != newSpec;
+
         request.Status = status;
         request.Priority = (RequestPriority)dto.Priority;
         request.Complexity = (RequestComplexity)dto.Complexity;
-        request.Specialization = (SpecializationType)dto.Specialization;
+        request.Specialization = newSpec;
         request.NeedsReview = false;
+
+        // Если заявка не отменена и не завершена, но нет работника (или сменилась специальность) — автоназначаем самого свободного
+        if (status is not (RequestStatus.Completed or RequestStatus.Rejected) &&
+            (request.AssignedWorkerId is null || specChanged))
+        {
+            var leastLoadedWorker = await db.Users
+                .AsNoTracking()
+                .Where(u => u.Role == UserRole.worker && u.Specialization == newSpec)
+                .Select(u => new
+                {
+                    u.Id,
+                    ActiveCount = db.ServiceRequests.Count(r =>
+                        r.AssignedWorkerId == u.Id &&
+                        (r.Status == RequestStatus.Assigned || r.Status == RequestStatus.InProgress)),
+                    TotalCount = db.ServiceRequests.Count(r => r.AssignedWorkerId == u.Id)
+                })
+                .OrderBy(w => w.ActiveCount)
+                .ThenBy(w => w.TotalCount)
+                .FirstOrDefaultAsync();
+
+            if (leastLoadedWorker is not null)
+            {
+                request.AssignedWorkerId = leastLoadedWorker.Id;
+                if (request.Status == RequestStatus.New)
+                    request.Status = RequestStatus.Assigned;
+            }
+        }
+
         request.DoneAt = status is RequestStatus.Completed or RequestStatus.Rejected
             ? request.DoneAt ?? DateTime.UtcNow
             : null;

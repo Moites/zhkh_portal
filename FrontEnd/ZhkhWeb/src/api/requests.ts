@@ -24,7 +24,6 @@ export interface ActionMessage {
   message: string
 }
 
-// Ключи TanStack Query
 export const MY_REQUESTS_KEY = ['my-requests'] as const
 export const WORKER_REQUESTS_KEY = ['worker-requests'] as const
 export const WORKER_SPEC_REQUESTS_KEY = ['worker-spec-requests'] as const
@@ -53,6 +52,9 @@ export const startExecutionRequest = (requestId: string) =>
 
 export const completeRequest = (requestId: string) =>
   api.post<ActionMessage>('/api/worker/taking_request', { requestId })
+
+export const sendRequestToReview = (requestId: string, comment: string) =>
+  api.post<ActionMessage>('/api/worker/review_request', { requestId, comment })
 
 // ---------- Администратор ----------
 
@@ -95,6 +97,9 @@ export interface ChangeInfoFormValues {
   priority: RequestPriority
   complexity: RequestComplexity
   specialization: Specialization
+  title?: string
+  description?: string
+  address?: string
 }
 
 export interface CreateWorkerFormValues {
@@ -146,4 +151,7 @@ export const changeRequestInformation = (values: ChangeInfoFormValues) =>
     priority: PRIORITY_ENUM[values.priority],
     complexity: COMPLEXITY_ENUM[values.complexity],
     specialization: SPECIALIZATION_ENUM[values.specialization],
+    title: values.title,
+    description: values.description,
+    address: values.address,
   })

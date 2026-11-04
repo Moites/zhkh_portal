@@ -26,12 +26,10 @@ export function RequireRole({ roles }: { roles?: Role[] }) {
 // Страницы входа и регистрации: вошедшему человеку они не нужны
 export function GuestOnly() {
   const { user, loading } = useAuth()
-  const location = useLocation()
 
   if (loading) return <PageLoader />
   if (user) {
-    const from = (location.state as { from?: string } | null)?.from
-    return <Navigate to={from ?? homePath(user.role)} replace />
+    return <Navigate to={homePath(user.role)} replace />
   }
   return <Outlet />
 }

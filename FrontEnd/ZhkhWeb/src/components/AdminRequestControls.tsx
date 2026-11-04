@@ -1,13 +1,16 @@
 import {
   Button,
+  Group,
   Paper,
   Select,
   SimpleGrid,
   Stack,
   Text,
+  Textarea,
+  TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import { IconCheck, IconUserCheck } from '@tabler/icons-react'
+import { IconBan, IconCheck, IconUserCheck } from '@tabler/icons-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
@@ -50,6 +53,10 @@ const specializationOptions = toOptions(SPECIALIZATION)
 export function AdminRequestControls({ request, workers = [], onUpdated }: AdminRequestControlsProps) {
   const queryClient = useQueryClient()
 
+  const [title, setTitle] = useState(request.title)
+  const [address, setAddress] = useState(request.address)
+  const [description, setDescription] = useState(request.description)
+
   const [status, setStatus] = useState<RequestStatus>(request.status)
   const [priority, setPriority] = useState<RequestPriority>(request.priority)
   const [complexity, setComplexity] = useState<RequestComplexity>(request.complexity)
@@ -57,6 +64,9 @@ export function AdminRequestControls({ request, workers = [], onUpdated }: Admin
   const [workerId, setWorkerId] = useState<string>(request.assignedWorkerId ?? '')
 
   useEffect(() => {
+    setTitle(request.title)
+    setAddress(request.address)
+    setDescription(request.description)
     setStatus(request.status)
     setPriority(request.priority)
     setComplexity(request.complexity)
@@ -72,7 +82,7 @@ export function AdminRequestControls({ request, workers = [], onUpdated }: Admin
   const changeInfoMutation = useMutation({
     mutationFn: changeRequestInformation,
     onSuccess: (res) => {
-      notifications.show({ color: 'green', message: res.message || 'Параметры заявки обновлены' })
+      notifications.show({ color: 'green', message: res.message || 'Заявка успешно обновлена' })
       invalidateAdminQueries()
       onUpdated?.()
     },
@@ -106,11 +116,44 @@ export function AdminRequestControls({ request, workers = [], onUpdated }: Admin
     }
   })
 
+  const handleSave = (overrideStatus?: RequestStatus) => {
+    changeInfoMutation.mutate({
+      requestId: request.id,
+      status: overrideStatus ?? status,
+      priority,
+      complexity,
+      specialization,
+      title: title.trim(),
+      address: address.trim(),
+      description: description.trim(),
+    })
+  }
+
   return (
     <Stack gap="md">
       <Paper bg={SOFT_BG} p="md" radius="md">
         <Stack gap="sm">
-          <Text fw={600}>Управление заявкой</Text>
+          <Text fw={600}>Редактирование заявки и параметров</Text>
+
+          <TextInput
+            label="Заголовок заявки"
+            value={title}
+            onChange={(e) => setTitle(e.currentTarget.value)}
+          />
+
+          <TextInput
+            label="Адрес"
+            value={address}
+            onChange={(e) => setAddress(e.currentTarget.value)}
+          />
+
+          <Textarea
+            label="Описание (и комментарии)"
+            minRows={4}
+            autosize
+            value={description}
+            onChange={(e) => setDescription(e.currentTarget.value)}
+          />
 
           <SimpleGrid cols={2} spacing="sm">
             <Select
@@ -143,29 +186,33 @@ export function AdminRequestControls({ request, workers = [], onUpdated }: Admin
             />
           </SimpleGrid>
 
-          <Button
-            mt="xs"
-            leftSection={<IconCheck size={18} />}
-            loading={changeInfoMutation.isPending}
-            onClick={() =>
-              changeInfoMutation.mutate({
-                requestId: request.id,
-                status,
-                priority,
-                complexity,
-                specialization,
-              })
-            }
-            fullWidth
-          >
-            {request.needsReview ? 'Подтвердить параметры и снять с проверки' : 'Сохранить изменения'}
-          </Button>
+          <Group grow mt="xs">
+            <Button
+              leftSection={<IconCheck size={18} />}
+              loading={changeInfoMutation.isPending}
+              onClick={() => handleSave()}
+            >
+              {request.needsReview ? 'Подтвердить и снять с проверки' : 'Сохранить правки'}
+            </Button>
+
+            {request.status !== 'Rejected' && (
+              <Button
+                color="red"
+                variant="light"
+                leftSection={<IconBan size={18} />}
+                loading={changeInfoMutation.isPending}
+                onClick={() => handleSave('Rejected')}
+              >
+                Отменить (Отклонить)
+              </Button>
+            )}
+          </Group>
         </Stack>
       </Paper>
 
       <Paper bg={SOFT_BG} p="md" radius="md">
         <Stack gap="sm">
-          <Text fw={600}>Назначение исполнителя</Text>
+          <Text fw={600}>Назначение исполнителя вручную</Text>
 
           <Select
             label="Сотрудник"
@@ -190,7 +237,7 @@ export function AdminRequestControls({ request, workers = [], onUpdated }: Admin
             onClick={() => appointMutation.mutate({ reqId: request.id, wId: workerId })}
             fullWidth
           >
-            Назначить работника
+            Назначить выбранного работника
           </Button>
         </Stack>
       </Paper>
