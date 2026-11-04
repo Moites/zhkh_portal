@@ -11,6 +11,10 @@ services:
     environment:
       - Ml__Url=http://python-ml:8000/
       - ClientUrl=http://192.168.1.106:5173
+      - ConnectionStrings__Default=Host=ИМЯ_СЕРВИСА_POSTGRES;Port=5432;Database=zhkh;Username=zhkh_user;Password=gYombBZPERMxwF2zS07vicVDKJ5UpQsa
+      - Jwt__Key=xZWCDup0LkE3Q9Vt8n1HSMIPN5fJqogw
+      - Jwt__Issuer=zhkh-api
+      - Jwt__Audience=zhkh-client
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
