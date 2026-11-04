@@ -11,7 +11,7 @@ services:
     environment:
       - Ml__Url=http://python-ml:8000/
       - ClientUrl=http://192.168.1.106:5173
-      - ConnectionStrings__Default=Host=zhkh-postgres-1;Port=5433;Database=zhkh;Username=zhkh_user;Password=${PG_PASSWORD}
+      - ConnectionStrings__Default=Host=zhkh-postgres-1;Port=5432;Database=zhkh;Username=zhkh_user;Password=${PG_PASSWORD}
       - Jwt__Key=${JWT_KEY}
       - Jwt__Issuer=zhkh-api
       - Jwt__Audience=zhkh-client
