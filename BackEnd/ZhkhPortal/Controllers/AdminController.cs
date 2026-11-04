@@ -42,10 +42,10 @@ public class AdminController(AppDbContext db) : ControllerBase
         }
     }
 
-    private readonly struct DobAdapter(DateOnly value)
+    private readonly record struct DobAdapter(DateOnly Value)
     {
-        public static implicit operator DateOnly(DobAdapter a) => a.value;
-        public static implicit operator DateTime(DobAdapter a) => a.value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
+        public static implicit operator DateOnly(DobAdapter a) => a.Value;
+        public static implicit operator DateTime(DobAdapter a) => a.Value.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
     }
 
     private static TUser NewUser<TUser>(DbSet<TUser> _) where TUser : class, new() => new();
