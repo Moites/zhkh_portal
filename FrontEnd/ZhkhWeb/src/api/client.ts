@@ -1,9 +1,6 @@
 const API_URL: string = import.meta.env.VITE_API_URL ?? 'http://192.168.1.106:5000'
 const TOKEN_KEY = 'zhkh_token'
 
-// Демо-режим (npm run dev:mock): вместо настоящего сервера отвечает src/api/mock.ts
-export const IS_MOCK: boolean = import.meta.env.VITE_MOCK === 'true'
-
 export const tokenStorage = {
   get: () => localStorage.getItem(TOKEN_KEY),
   set: (token: string) => localStorage.setItem(TOKEN_KEY, token),
@@ -44,35 +41,27 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   const token = tokenStorage.get()
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  let status: number
+  let response: Response
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    })
+  } catch {
+    throw new ApiError(0, 'Нет связи с сервером. Проверьте, что API запущен')
+  }
+
+  // Ответ может быть JSON, обычной строкой или пустым
+  const text = await response.text()
+  const status = response.status
   let data: unknown = undefined
 
-  if (IS_MOCK) {
-    const { mockHandler } = await import('./mock')
-    const mocked = await mockHandler(method, path, body, token)
-    status = mocked.status
-    data = mocked.body
-  } else {
-    let response: Response
+  if (text) {
     try {
-      response = await fetch(`${API_URL}${path}`, {
-        method,
-        headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
-      })
+      data = JSON.parse(text)
     } catch {
-      throw new ApiError(0, 'Нет связи с сервером. Проверьте, что API запущен')
-    }
-
-    // Ответ может быть JSON, обычной строкой или пустым
-    const text = await response.text()
-    status = response.status
-    if (text) {
-      try {
-        data = JSON.parse(text)
-      } catch {
-        data = text
-      }
+      data = text
     }
   }
 

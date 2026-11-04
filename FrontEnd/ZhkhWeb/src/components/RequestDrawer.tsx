@@ -1,4 +1,4 @@
-import { Drawer, Group, Stack, Text, Title } from '@mantine/core'
+import { Divider, Drawer, Group, Stack, Text, Title } from '@mantine/core'
 import type { ReactNode } from 'react'
 import type { ServiceRequest } from '../api/types'
 import { formatDateTime } from '../lib/format'
@@ -9,6 +9,7 @@ interface RequestDrawerProps {
   request: ServiceRequest | null
   opened: boolean
   onClose: () => void
+  actions?: ReactNode
 }
 
 function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -23,7 +24,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 }
 
 // Боковая панель с полной информацией о заявке
-export function RequestDrawer({ request, opened, onClose }: RequestDrawerProps) {
+export function RequestDrawer({ request, opened, onClose, actions }: RequestDrawerProps) {
   return (
     <Drawer opened={opened} onClose={onClose} position="right" size="md" title="Заявка" padding="lg">
       {request && (
@@ -65,6 +66,13 @@ export function RequestDrawer({ request, opened, onClose }: RequestDrawerProps) 
             <Text c="dimmed" fz="sm">
               Заявку проверяет диспетчер: он уточнит специальность и приоритет, после чего назначит сотрудника.
             </Text>
+          )}
+
+          {actions && (
+            <>
+              <Divider />
+              {actions}
+            </>
           )}
         </Stack>
       )}

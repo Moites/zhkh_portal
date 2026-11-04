@@ -3,12 +3,14 @@ import { GuestOnly, RequireRole } from './auth/RouteGuards'
 import { Layout } from './components/Layout'
 import { ComingSoon } from './pages/ComingSoon'
 import { Forbidden } from './pages/Forbidden'
+import { FreeTasks } from './pages/FreeTasks'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { MyRequests } from './pages/MyRequests'
 import { NewRequest } from './pages/NewRequest'
 import { NotFound } from './pages/NotFound'
 import { Register } from './pages/Register'
+import { WorkerTasks } from './pages/WorkerTasks'
 
 export default function App() {
   return (
@@ -30,8 +32,8 @@ export default function App() {
 
         {/* Сотрудник */}
         <Route element={<RequireRole roles={['worker']} />}>
-          <Route path="/tasks" element={<ComingSoon title="Мои задачи" />} />
-          <Route path="/tasks/free" element={<ComingSoon title="Свободные заявки" />} />
+          <Route path="/tasks" element={<WorkerTasks />} />
+          <Route path="/tasks/free" element={<FreeTasks />} />
         </Route>
 
         {/* Администратор */}
